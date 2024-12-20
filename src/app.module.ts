@@ -1,19 +1,26 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from '@/modules/auth/auth.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { databaseConfigOptions } from '@/config/database.config';
 import { UsersModule } from '@/modules/users/users.module';
-import { AppController } from '@/app.controller';
-import { AppService } from '@/app.service';
+import { AuthModule } from '@/modules/auth/auth.module';
 
 @Module({
   imports: [
+    // Load and validate environment variables
     ConfigModule.forRoot({
       isGlobal: true,
+      cache: true,
     }),
-    AuthModule,
+    
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: databaseConfigOptions,
+      inject: [ConfigService],
+    }),
+    // Feature modules
     UsersModule,
+    AuthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService,],
 })
 export class AppModule {}
