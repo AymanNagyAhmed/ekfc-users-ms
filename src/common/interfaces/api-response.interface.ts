@@ -1,23 +1,30 @@
 import { HTTP_STATUS } from '@/common/constants/api.constants';
 
-export interface ApiResponseMetadata {
-  path: string;
-  timestamp: string;
-}
-
-export interface ApiSuccessResponse<T> extends ApiResponseMetadata {
+/**
+ * Interface for successful API responses
+ */
+export interface ApiSuccessResponse<T> {
   success: true;
-  statusCode: typeof HTTP_STATUS[keyof typeof HTTP_STATUS];
+  statusCode: number;
   message: string;
   data: T;
+  path: string;
+  timestamp: Date;
 }
 
-export interface ApiErrorResponse extends ApiResponseMetadata {
+/**
+ * Interface for error API responses
+ */
+export interface ApiErrorResponse {
   success: false;
-  statusCode: typeof HTTP_STATUS[keyof typeof HTTP_STATUS];
+  statusCode: number;
   message: string;
-  errors?: Record<string, any>;
-  data: null;
+  path: string;
+  timestamp: Date;
+  errors?: Record<string, string[]>;
 }
 
+/**
+ * Union type for all API responses
+ */
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse; 

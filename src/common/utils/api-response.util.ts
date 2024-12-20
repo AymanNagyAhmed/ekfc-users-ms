@@ -1,37 +1,53 @@
-import { HTTP_STATUS } from '@/common/constants/api.constants';
 import { ApiResponse, ApiSuccessResponse, ApiErrorResponse } from '@/common/interfaces/api-response.interface';
+import { HTTP_STATUS } from '@/common/constants/api.constants';
 
+/**
+ * Utility class for creating standardized API responses
+ */
 export class ApiResponseUtil {
+    /**
+     * Creates a success response object following the API response format
+     * @param data Response data
+     * @param message Success message
+     * @param path Request path
+     * @param statusCode HTTP status code (defaults to 200)
+     */
     static success<T>(
         data: T,
         message: string,
         path: string,
-        statusCode: typeof HTTP_STATUS[keyof typeof HTTP_STATUS] = HTTP_STATUS.OK,
+        statusCode: number = HTTP_STATUS.OK,
     ): ApiSuccessResponse<T> {
         return {
             success: true,
             statusCode,
             message,
-            path,
-            timestamp: new Date().toISOString(),
             data,
+            path,
+            timestamp: new Date(),
         };
     }
 
+    /**
+     * Creates an error response object following the API response format
+     * @param message Error message
+     * @param path Request path
+     * @param statusCode HTTP status code
+     * @param errors Optional validation errors
+     */
     static error(
         message: string,
         path: string,
-        statusCode: typeof HTTP_STATUS[keyof typeof HTTP_STATUS] = HTTP_STATUS.BAD_REQUEST,
-        errors?: Record<string, any>,
+        statusCode: number,
+        errors?: Record<string, string[]>,
     ): ApiErrorResponse {
         return {
             success: false,
             statusCode,
             message,
             path,
-            timestamp: new Date().toISOString(),
-            data: null,
-            ...(errors && { errors }),
+            timestamp: new Date(),
+            errors,
         };
     }
 } 
