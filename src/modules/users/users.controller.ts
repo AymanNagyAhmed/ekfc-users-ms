@@ -8,11 +8,18 @@ import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
 import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
 import { ApiResponseUtil } from '@/common/utils/api-response.util';
 import { HTTP_STATUS } from '@/common/constants/api.constants';
+import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
 
+@ApiTags('users')
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
+    @ApiOperation({ summary: 'Get all users' })
+    @SwaggerResponse({ 
+      status: 200, 
+      description: 'List of all users retrieved successfully' 
+    })
     @Get()
     async findAll(@Req() req: Request): Promise<ApiResponse<User[]>> {
         const users = await this.usersService.findAll();
@@ -23,6 +30,11 @@ export class UsersController {
         );
     }
 
+    @ApiOperation({ summary: 'Create new user' })
+    @SwaggerResponse({ 
+      status: 201, 
+      description: 'User created successfully' 
+    })
     @Post()
     async create(
         @Body() createUserDto: CreateUserDto,
@@ -37,6 +49,15 @@ export class UsersController {
         );
     }
 
+    @ApiOperation({ summary: 'Get user by ID' })
+    @SwaggerResponse({ 
+      status: 200, 
+      description: 'User retrieved successfully' 
+    })
+    @SwaggerResponse({ 
+      status: 404, 
+      description: 'User not found' 
+    })
     @Get(':id')
     async findOne(
         @Param('id') id: string,
@@ -50,6 +71,15 @@ export class UsersController {
         );
     }
 
+    @ApiOperation({ summary: 'Update user by ID' })
+    @SwaggerResponse({ 
+      status: 200, 
+      description: 'User updated successfully' 
+    })
+    @SwaggerResponse({ 
+      status: 404, 
+      description: 'User not found' 
+    })
     @Put(':id')
     async update(
         @Param('id') id: string,
@@ -77,6 +107,15 @@ export class UsersController {
         }
     }
 
+    @ApiOperation({ summary: 'Patch user by ID' })
+    @SwaggerResponse({ 
+      status: 200, 
+      description: 'User updated successfully' 
+    })
+    @SwaggerResponse({ 
+      status: 404, 
+      description: 'User not found' 
+    })
     @Patch(':id')
     async patch(
         @Param('id') id: string,
@@ -86,6 +125,15 @@ export class UsersController {
         return this.update(id, updateUserDto, req);
     }
 
+    @ApiOperation({ summary: 'Delete user by ID' })
+    @SwaggerResponse({ 
+      status: 200, 
+      description: 'User deleted successfully' 
+    })
+    @SwaggerResponse({ 
+      status: 404, 
+      description: 'User not found' 
+    })
     @Delete(':id')
     async remove(
         @Param('id') id: string,

@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { GlobalExceptionFilter } from '@/common/filters/global-exception.filter';
 import { TransformResponseInterceptor } from '@/common/interceptors/transform-response.interceptor';
 import { API } from '@/common/constants/api.constants';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,18 @@ async function bootstrap() {
   // Global response transformer
   app.useGlobalInterceptors(new TransformResponseInterceptor());
 
+  // Swagger configuration
+  const config = new DocumentBuilder()
+    .setTitle('User managementmanagement API')
+    .setDescription('API documentation for user management management system')
+    .setVersion('1.0')
+    .addTag('users')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
   const configService = app.get(ConfigService);
   app.useGlobalGuards(new AuthGuard(app.get(Reflector)));
   
@@ -27,5 +40,6 @@ async function bootstrap() {
   await app.listen(port);
   
   console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
 }
 bootstrap();
