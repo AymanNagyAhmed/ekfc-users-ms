@@ -6,6 +6,7 @@ import { InvalidInputException } from '@/common/exceptions/invalid-input.excepti
 import { UnexpectedErrorException } from '@/common/exceptions/unexpected-error.exception';
 import { User, UserDocument } from '@/modules/users/schemas/user.schema';
 import * as bcrypt from 'bcryptjs';
+import { CreateUserDto, UserRole } from '@/modules/users/dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -28,7 +29,7 @@ export class UsersService {
    * @returns Newly created user object
    * @throws InvalidInputException if email already exists
    */
-  async createUser(createUserDto: Partial<User>): Promise<User> {
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
     try {
       const existingUser = await this.findUserByEmail(createUserDto.email);
       if (existingUser) {
@@ -39,13 +40,19 @@ export class UsersService {
       const newUser = new this.userModel({
         ...createUserDto,
         password: hashedPassword,
+        role: createUserDto.role || UserRole.USER,
+        isActive: createUserDto.isActive ?? true,
+        isEmailVerified: createUserDto.isEmailVerified ?? false,
       });
 
-      return await newUser.save();
+      const savedUser = await newUser.save();
+      return savedUser;
     } catch (error) {
       if (error instanceof InvalidInputException) {
         throw error;
       }
+      // Log the actual error for debugging
+      console.error('Error creating user:', error);
       throw new UnexpectedErrorException('Error creating user');
     }
   }
@@ -93,20 +100,45 @@ export class UsersService {
    */
   async updateUser(id: string, updateUserDto: Partial<User>): Promise<User> {
     try {
-      const user = await this.userModel
-        .findByIdAndUpdate(id, updateUserDto, { new: true })
-        .exec();
-      
-      if (!user) {
+      // First check if user exists
+      const existingUser = await this.userModel.findById(id);
+      if (!existingUser) {
         throw new ResourceNotFoundException('User not found');
       }
+
+      // If updating email, check if new email already exists
+      if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
+        const emailExists = await this.findUserByEmail(updateUserDto.email);
+        if (emailExists) {
+          throw new InvalidInputException('Email already exists');
+        }
+      }
+
+      // Perform the update with runValidators
+      const updatedUser = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { $set: updateUserDto },
+          { 
+            new: true,          // Return the updated document
+            runValidators: true, // Run schema validators
+            lean: false         // Return a Mongoose document
+          }
+        )
+        .exec();
+
+      if (!updatedUser) {
+        throw new ResourceNotFoundException('User not found after update');
+      }
       
-      return user;
+      return updatedUser;
     } catch (error) {
-      if (error instanceof ResourceNotFoundException) {
+      console.error('Update error details:', error);
+      if (error instanceof ResourceNotFoundException || 
+          error instanceof InvalidInputException) {
         throw error;
       }
-      throw new UnexpectedErrorException('Error updating user');
+      throw new UnexpectedErrorException('Error updating user: ' + error.message);
     }
   }
 

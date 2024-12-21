@@ -49,12 +49,6 @@ export interface User extends Document {
   isActive: boolean;
 
   /**
-   * Array of image URLs associated with the user
-   * @default []
-   */
-  images: string[];
-
-  /**
    * Timestamp when the document was created
    */
   createdAt: Date;

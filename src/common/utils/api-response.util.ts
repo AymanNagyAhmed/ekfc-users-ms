@@ -22,9 +22,9 @@ export class ApiResponseUtil {
             success: true,
             statusCode,
             message,
-            data,
             path,
             timestamp: new Date(),
+            data,
         };
     }
 

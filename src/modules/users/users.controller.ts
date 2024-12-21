@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, Patch } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { Request } from 'express';
 import { UsersService } from '@/modules/users/users.service';
@@ -56,12 +56,34 @@ export class UsersController {
         @Body() updateUserDto: UpdateUserDto,
         @Req() req: Request
     ): Promise<ApiResponse<User>> {
-        const user = await this.usersService.updateUser(id, updateUserDto);
-        return ApiResponseUtil.success(
-            user,
-            'User updated successfully',
-            req.path
-        );
+        try {
+            const cleanUpdateDto = Object.entries(updateUserDto)
+                .reduce((acc, [key, value]) => {
+                    if (value !== undefined && value !== null) {
+                        acc[key] = value;
+                    }
+                    return acc;
+                }, {});            
+            const user = await this.usersService.updateUser(id, cleanUpdateDto);
+            
+            return ApiResponseUtil.success(
+                user,
+                'User updated successfully',
+                req.path
+            );
+        } catch (error) {
+            console.error('Update error:', error);
+            throw error;
+        }
+    }
+
+    @Patch(':id')
+    async patch(
+        @Param('id') id: string,
+        @Body() updateUserDto: UpdateUserDto,
+        @Req() req: Request
+    ): Promise<ApiResponse<User>> {
+        return this.update(id, updateUserDto, req);
     }
 
     @Delete(':id')
