@@ -7,6 +7,7 @@ import { GlobalExceptionFilter } from '@/common/filters/global-exception.filter'
 import { TransformResponseInterceptor } from '@/common/interceptors/transform-response.interceptor';
 import { API } from '@/common/constants/api.constants';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { RmqService } from '@/config/rmq/rmq.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -37,7 +38,11 @@ async function bootstrap() {
   
   const port = configService.get<number>('PORT', 4003);
   
-  await app.listen(port);
+  // Connect to RabbitMQ
+  const rmqService = app.get<RmqService>(RmqService);
+  app.connectMicroservice(rmqService.getOptions('users', true));
+  await app.startAllMicroservices();
+
   
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/api/docs`);

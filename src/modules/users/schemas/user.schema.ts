@@ -1,11 +1,11 @@
+import { AbstractDocument } from '@/common/database/abstract.schema';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-import { UserRole } from '@/modules/users/enums/user-role.enum';
+import { UserRole } from '../dto/create-user.dto';
 
-export type UserDocument = User & Document;
 
 @Schema({
   timestamps: true,
+  versionKey: false,
   toJSON: {
     transform: (_, ret) => {
       delete ret.__v;
@@ -16,7 +16,7 @@ export type UserDocument = User & Document;
   },
   collection: 'users',
 })
-export class User {
+export class User extends AbstractDocument {
   @Prop({
     required: false,
     trim: true,

@@ -1,26 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
+import { Inject, Injectable } from '@nestjs/common';
 import { ResourceNotFoundException } from '@/common/exceptions/resource-not-found.exception';
 import { InvalidInputException } from '@/common/exceptions/invalid-input.exception';
 import { UnexpectedErrorException } from '@/common/exceptions/unexpected-error.exception';
-import { User, UserDocument } from '@/modules/users/schemas/user.schema';
+import { User } from '@/modules/users/schemas/user.schema';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto, UserRole } from '@/modules/users/dto/create-user.dto';
+import { ClientProxy } from '@nestjs/microservices';
+import { UsersRepository } from './users.repository';
+import { BLOGS_SERVICE } from '@/common/constants/services';
 
 @Injectable()
 export class UsersService {
   private readonly SALT_ROUNDS = 10;
 
   constructor(
-    @InjectModel('User') private readonly userModel: Model<UserDocument>
-  ) {}
+    private readonly usersRepository: UsersRepository,
+    @Inject(BLOGS_SERVICE) private blogsClient: ClientProxy
+    ) {}
 
   /**
    * find all users
    */
   async findAll(): Promise<User[]> {
-    return await this.userModel.find().exec();
+    return await this.usersRepository.find({});
   }
 
   /**
@@ -31,13 +33,13 @@ export class UsersService {
    */
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     try {
-      const existingUser = await this.findUserByEmail(createUserDto.email);
+      const existingUser = await this.usersRepository.findOne({ email: createUserDto.email });
       if (existingUser) {
         throw new InvalidInputException('Email already exists');
       }
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, this.SALT_ROUNDS);
-      const newUser = new this.userModel({
+      const newUser = await this.usersRepository.create({
         ...createUserDto,
         password: hashedPassword,
         role: createUserDto.role || UserRole.USER,
@@ -45,8 +47,7 @@ export class UsersService {
         isEmailVerified: createUserDto.isEmailVerified ?? false,
       });
 
-      const savedUser = await newUser.save();
-      return savedUser;
+      return newUser;
     } catch (error) {
       if (error instanceof InvalidInputException) {
         throw error;
@@ -58,19 +59,6 @@ export class UsersService {
   }
 
   /**
-   * Finds a user by their email address
-   * @param email User's email address
-   * @returns User object if found
-   */
-  async findUserByEmail(email: string): Promise<User | null> {
-    try {
-      return await this.userModel.findOne({ email }).exec();
-    } catch (error) {
-      throw new UnexpectedErrorException('Error finding user');
-    }
-  }
-
-  /**
    * Retrieves a user by their ID
    * @param id User's unique identifier
    * @returns User object
@@ -78,16 +66,11 @@ export class UsersService {
    */
   async findUserById(id: string): Promise<User> {
     try {
-      const user = await this.userModel.findById(id).exec();
-      if (!user) {
-        throw new ResourceNotFoundException('User not found');
-      }
+      const user = await this.usersRepository.findOne({ _id: id });
       return user;
     } catch (error) {
-      if (error instanceof ResourceNotFoundException) {
-        throw error;
-      }
-      throw new UnexpectedErrorException('Error finding user');
+      console.error('Error finding user:', error);
+      throw new ResourceNotFoundException('User not found');
     }
   }
 
@@ -100,38 +83,8 @@ export class UsersService {
    */
   async updateUser(id: string, updateUserDto: Partial<User>): Promise<User> {
     try {
-      // First check if user exists
-      const existingUser = await this.userModel.findById(id);
-      if (!existingUser) {
-        throw new ResourceNotFoundException('User not found');
-      }
-
-      // If updating email, check if new email already exists
-      if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
-        const emailExists = await this.findUserByEmail(updateUserDto.email);
-        if (emailExists) {
-          throw new InvalidInputException('Email already exists');
-        }
-      }
-
-      // Perform the update with runValidators
-      const updatedUser = await this.userModel
-        .findByIdAndUpdate(
-          id,
-          { $set: updateUserDto },
-          { 
-            new: true,          // Return the updated document
-            runValidators: true, // Run schema validators
-            lean: false         // Return a Mongoose document
-          }
-        )
-        .exec();
-
-      if (!updatedUser) {
-        throw new ResourceNotFoundException('User not found after update');
-      }
-      
-      return updatedUser;
+      const user = await this.usersRepository.findOneAndUpdate({ _id: id }, updateUserDto);
+      return user;
     } catch (error) {
       console.error('Update error details:', error);
       if (error instanceof ResourceNotFoundException || 
@@ -149,7 +102,7 @@ export class UsersService {
    */
   async deleteUser(id: string): Promise<void> {
     try {
-      const result = await this.userModel.findByIdAndDelete(id).exec();
+      const result = await this.usersRepository.deleteOne({ _id: id });
       if (!result) {
         throw new ResourceNotFoundException('User not found');
       }
@@ -170,7 +123,7 @@ export class UsersService {
    */
   async validateUserCredentials(email: string, password: string): Promise<User> {
     try {
-      const user = await this.findUserByEmail(email);
+      const user = await this.usersRepository.findOne({ email });
       if (!user) {
         throw new InvalidInputException('Invalid credentials');
       }
