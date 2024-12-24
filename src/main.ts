@@ -43,7 +43,7 @@ async function bootstrap() {
   app.connectMicroservice(rmqService.getOptions('users', true));
   await app.startAllMicroservices();
 
-  
+  await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/api/docs`);
 }

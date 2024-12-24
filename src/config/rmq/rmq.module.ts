@@ -17,23 +17,24 @@ export class RmqModule {
       module: RmqModule,
       imports: [
         ClientsModule.registerAsync([
-          { 
+          {
             name,
             useFactory: (configService: ConfigService) => ({
               transport: Transport.RMQ,
               options: {
                 urls: [`amqp://${configService.get<string>('RMQ_USER')}:${configService.get<string>('RMQ_PASSWORD')}@${configService.get<string>('RMQ_HOST')}:${configService.get<string>('RMQ_PORT')}`],
                 queue: configService.get<string>(`RMQ_${name.toUpperCase()}_QUEUE`),
-                noAck: false,
                 persistent: true,
-                queueOptions: { durable: false }
-              }
+                queueOptions: {
+                  durable: true
+                },
+              },
             }),
-            inject: [ConfigService]
-          }
-        ])
+            inject: [ConfigService],
+          },
+        ]),
       ],
-      exports: [ClientsModule]
+      exports: [ClientsModule],
     };
   }
 }

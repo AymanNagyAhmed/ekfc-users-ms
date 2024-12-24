@@ -15,7 +15,6 @@ export class UsersService {
 
   constructor(
     private readonly usersRepository: UsersRepository,
-    @Inject(BLOGS_SERVICE) private blogsClient: ClientProxy
     ) {}
 
   /**

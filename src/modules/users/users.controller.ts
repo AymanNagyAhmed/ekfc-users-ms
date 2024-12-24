@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, Req, Patch } from '@nestjs/common';
-import { MessagePattern } from '@nestjs/microservices';
 import { Request } from 'express';
 import { UsersService } from '@/modules/users/users.service';
 import { ApiResponse } from '@/common/interfaces/api-response.interface';
@@ -147,58 +146,5 @@ export class UsersController {
         );
     }
 
-    // Message Pattern Handlers
-    @MessagePattern({ cmd: 'create_user' })
-    async createUser(createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
-        const user = await this.usersService.createUser(createUserDto);
-        return ApiResponseUtil.success(
-            user,
-            'User created successfully',
-            '/users',
-            HTTP_STATUS.CREATED
-        );
-    }
 
-    @MessagePattern({ cmd: 'get_users' })
-    async getUsers(): Promise<ApiResponse<User[]>> {
-        const users = await this.usersService.findAll();
-        return ApiResponseUtil.success(
-            users,
-            'Users retrieved successfully',
-            '/users'
-        );
-    }
-
-    @MessagePattern({ cmd: 'get_user' })
-    async getUser(data: { id: string }): Promise<ApiResponse<User>> {
-        const user = await this.usersService.findUserById(data.id);
-        return ApiResponseUtil.success(
-            user,
-            'User retrieved successfully',
-            `/users/${data.id}`
-        );
-    }
-
-    @MessagePattern({ cmd: 'update_user' })
-    async updateUser(data: {
-        id: string;
-        updateData: UpdateUserDto;
-    }): Promise<ApiResponse<User>> {
-        const user = await this.usersService.updateUser(data.id, data.updateData);
-        return ApiResponseUtil.success(
-            user,
-            'User updated successfully',
-            `/users/${data.id}`
-        );
-    }
-
-    @MessagePattern({ cmd: 'delete_user' })
-    async deleteUser(data: { id: string }): Promise<ApiResponse<void>> {
-        await this.usersService.deleteUser(data.id);
-        return ApiResponseUtil.success(
-            null,
-            'User deleted successfully',
-            `/users/${data.id}`
-        );
-    }
 }
