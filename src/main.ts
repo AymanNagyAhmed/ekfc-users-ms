@@ -8,6 +8,7 @@ import { TransformResponseInterceptor } from '@/common/interceptors/transform-re
 import { API } from '@/common/constants/api.constants';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { RmqService } from '@/config/rmq/rmq.service';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -42,6 +43,9 @@ async function bootstrap() {
   const rmqService = app.get<RmqService>(RmqService);
   app.connectMicroservice(rmqService.getOptions('users', true));
   await app.startAllMicroservices();
+
+  // Add cookie parser middleware
+  app.use(cookieParser());
 
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);

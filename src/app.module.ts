@@ -18,9 +18,8 @@ import { PostsModule } from './modules/posts/posts.module';
     DatabaseModule,
 
     // Feature modules
-    UsersModule,
     AuthModule,
-
+    UsersModule,
     PostsModule,
   ],
 })

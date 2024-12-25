@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { ResourceNotFoundException } from '@/common/exceptions/resource-not-found.exception';
 import { InvalidInputException } from '@/common/exceptions/invalid-input.exception';
 import { UnexpectedErrorException } from '@/common/exceptions/unexpected-error.exception';
@@ -140,4 +140,55 @@ export class UsersService {
       throw new UnexpectedErrorException('Error validating credentials');
     }
   }
+
+  /**
+   * Retrieves a user by their ID
+   * @param id User's unique identifier
+   * @returns User object
+   * @throws ResourceNotFoundException if user not found
+   */
+  async getUser(getUserArgs: Partial<User>) {
+    return this.usersRepository.findOne(getUserArgs);
+  }
+
+  /**
+   * Validates the request to create a user
+   * @param request The request to validate
+   * @throws UnprocessableEntityException if email already exists
+   */
+  private async validateCreateUserRequest(request: CreateUserDto) {
+    let user: User;
+    try {
+      user = await this.usersRepository.findOne({
+        email: request.email,
+      });
+    } catch (err) {}
+
+    if (user) {
+      throw new UnprocessableEntityException('Email already exists.');
+    }
+  }
+
+  /**
+   * Validates the user credentials
+   * @param email User's email
+   * @param password User's password
+   * @returns User object
+   * @throws UnauthorizedException if credentials are invalid
+   */
+  async validateUser(email: string, password: string) {
+    const user = await this.usersRepository.findOne({ email });
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return user;
+  }
+
 }

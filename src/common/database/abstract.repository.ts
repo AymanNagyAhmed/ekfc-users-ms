@@ -1,4 +1,4 @@
-import { Logger, NotFoundException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
   FilterQuery,
   Model,
@@ -21,19 +21,26 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
    * Creates a new document in the database
    * @param document The document to create
    * @param options Optional save options
-   * @returns The created document
+   * @returns The created document with normalized _id
    */
   async create(
-    document: Omit<TDocument, '_id'>,
-    options?: SaveOptions,
+    document: Omit<TDocument, '_id'>, 
+    options?: SaveOptions
   ): Promise<TDocument> {
     const createdDocument = new this.model({
       ...document,
-      _id: new Types.ObjectId(),
+      _id: new Types.ObjectId()
     });
-    return (
-      await createdDocument.save(options)
-    ).toJSON() as unknown as TDocument;
+
+    const savedDocument = await createdDocument.save(options);
+    
+    // Convert to plain object and normalize the ID field
+    const plainDocument = savedDocument.toJSON();
+    
+    // Remove the virtual 'id' field if you want to only use _id
+    delete (plainDocument as any).id;
+    
+    return plainDocument as TDocument;
   }
 
   /**
@@ -41,14 +48,13 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
    * @param filterQuery The filter query to find the document
    * @param update The update to apply
    * @param options Optional save options
-   * @returns The updated document
-   * @throws NotFoundException if document not found
+   * @returns The updated document or null if not found
    */
   async findOneAndUpdate(
     filterQuery: FilterQuery<TDocument>,
     update: UpdateQuery<TDocument>,
     options?: SaveOptions,
-  ): Promise<TDocument> {
+  ): Promise<TDocument | null> {
     const session = options?.session || await this.startTransaction();
     try {
       const document = await this.model.findOneAndUpdate(
@@ -64,8 +70,7 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
       );
 
       if (!document) {
-        this.logger.warn(`Document not found with filterQuery:`, filterQuery);
-        throw new NotFoundException('Document not found.');
+        return null;
       }
 
       if (!options?.session) {
@@ -88,20 +93,17 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
   /**
    * Finds a single document in the database
    * @param filterQuery The filter query to apply
-   * @returns The found document
-   * @throws NotFoundException if the document is not found
+   * @returns The found document or null if not found
    */
-  async findOne(filterQuery: FilterQuery<TDocument>): Promise<TDocument> {
+  async findOne(filterQuery: FilterQuery<TDocument>): Promise<TDocument | null> {
     const document = await this.model.findOne(filterQuery, {}, { lean: true });
 
     if (!document) {
-      this.logger.warn('Document not found with filterQuery', filterQuery);
-      throw new NotFoundException('Document not found.');
+      return null;
     }
 
     return document as unknown as TDocument;
   }
-
   
   async deleteOne(filterQuery: FilterQuery<TDocument>) {
     const document = await this.model.findOneAndDelete(filterQuery, {
@@ -109,8 +111,7 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
     });
 
     if (!document) {
-      this.logger.warn(`Document not found with filterQuery:`, filterQuery);
-      throw new NotFoundException('Document not found.');
+      return null;
     }
 
     return document;
