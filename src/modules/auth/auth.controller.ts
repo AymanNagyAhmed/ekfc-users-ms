@@ -8,135 +8,86 @@ import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse, ApiSecurity, Api
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { ApiResponse } from '@/common/interfaces/api-response.interface';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { MessagePattern } from '@nestjs/microservices';
 
 interface LoginResponse {
   user: User;
   access_token: string;
 }
 
-@ApiTags('auth')
+@ApiTags('2. Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Register' })
-  @SwaggerResponse({ 
-    status: 200, 
-    description: 'Register successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        statusCode: { type: 'number', example: 200 },
-        message: { type: 'string', example: 'User created successfully' },
-        path: { type: 'string', example: '/auth/register' },
-        timestamp: { type: 'string', example: '2024-12-25T11:12:56.269Z' },
-        data: {
-          type: 'object',
-          properties: {
-            _id: { type: 'string', example: '676be8b818a1117445990f53' },
-            email: { type: 'string', example: 'user10test.com' },
-            isEmailVerified: { type: 'boolean', example: false },
-            role: { type: 'string', example: 'user' },
-            isActive: { type: 'boolean', example: true },
-            createdAt: { type: 'string', example: '2024-12-25T11:12:56.249Z' },
-            updatedAt: { type: 'string', example: '2024-12-25T11:12:56.249Z' },
-            fullName: { type: 'string', example: 'Anonymous User' }
-          }
-        }
-      }
-    }
-  })
-  @SwaggerResponse({ 
-    status: 400, 
-    description: 'Bad Request - Email already exists',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: false },
-        statusCode: { type: 'number', example: 400 },
-        message: { type: 'string', example: 'Email already exists' },
-        path: { type: 'string', example: '/api/auth/register' },
-        timestamp: { type: 'string', example: '2024-12-25T11:11:58.171Z' }
-      }
-    }
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'user1@test.com' },
-        password: { type: 'string', example: '123456789' }
-      }
-    }
-  })
   @Post('register')
-  async register(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
-    return this.authService.register(createUserDto);
-  }
-
-  @ApiOperation({ summary: 'Login' })
+  @ApiOperation({ summary: 'Register new user' })
   @SwaggerResponse({ 
-    status: 200, 
-    description: 'Login successfully',
+    status: 201, 
+    description: 'User registered successfully',
     schema: {
       type: 'object',
       properties: {
         success: { type: 'boolean', example: true },
-        statusCode: { type: 'number', example: 200 },
-        message: { type: 'string', example: 'Operation successful' },
-        path: { type: 'string', example: '/api/auth/login' },
-        timestamp: { type: 'string', example: '2024-12-25T11:03:17.532Z' },
+        statusCode: { type: 'number', example: 201 },
+        message: { type: 'string', example: 'User registered successfully' },
+        path: { type: 'string', example: '/auth/register' },
+        timestamp: { type: 'string', example: '2024-12-25T11:00:00.000Z' },
         data: {
           type: 'object',
           properties: {
             user: {
               type: 'object',
               properties: {
-                _id: { type: 'string', example: '676b215a94d388b8af0154f5' },
-                email: { type: 'string', example: 'user1@test.com' },
-                password: { type: 'string', example: 'hashed password' },
-                isEmailVerified: { type: 'boolean', example: false },
-                role: { type: 'string', example: 'user' },
-                isActive: { type: 'boolean', example: true },
-                createdAt: { type: 'string', example: '2024-12-24T21:02:18.480Z' },
-                updatedAt: { type: 'string', example: '2024-12-24T21:02:18.480Z' }
+                _id: { type: 'string' },
+                email: { type: 'string' },
+                isEmailVerified: { type: 'boolean' },
+                role: { type: 'string' },
+                isActive: { type: 'boolean' },
+                createdAt: { type: 'string' },
+                updatedAt: { type: 'string' }
               }
-            },
-            access_token: { 
-              type: 'string', 
-              example: 'jwt_token' 
             }
           }
         }
       }
     }
   })
+  async register(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
+    return this.authService.register(createUserDto);
+  }
+
+  @Post('login')
+  @ApiOperation({ summary: 'User login' })
   @SwaggerResponse({ 
-    status: 401, 
-    description: 'Unauthorized - Invalid credentials',
+    status: 200, 
+    description: 'Login successful',
     schema: {
       type: 'object',
       properties: {
-        success: { type: 'boolean', example: false },
-        statusCode: { type: 'number', example: 401 },
-        message: { type: 'string', example: 'Invalid email or password' },
-        path: { type: 'string', example: '/api/auth/login' },
-        timestamp: { type: 'string', example: '2024-12-25T11:09:57.817Z' }
-      }
-    }
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'user1@test.com' },
-        password: { type: 'string', example: '123456789' }
+        success: { type: 'boolean', example: true },
+        statusCode: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'Login successful' },
+        path: { type: 'string', example: '/auth/login' },
+        timestamp: { type: 'string', example: '2024-12-25T11:00:00.000Z' },
+        data: {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string' },
+                email: { type: 'string' },
+                role: { type: 'string' }
+              }
+            },
+            access_token: { type: 'string' }
+          }
+        }
       }
     }
   })
   @UseGuards(LocalAuthGuard)
-  @Post('login')
   async login(
     @CurrentUser() user: User,
     @Res({ passthrough: true }) response: Response,
@@ -185,5 +136,11 @@ export class AuthController {
   logout(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
     this.authService.logout(response);
     return { message: 'Successfully logged out' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @MessagePattern({ cmd: 'validate_user' })
+  async validateUser(@CurrentUser() user: User): Promise<User> {
+    return user;
   }
 }

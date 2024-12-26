@@ -1,16 +1,26 @@
-import { PartialType, OmitType } from '@nestjs/mapped-types';
-import { IsString, IsOptional, MinLength } from 'class-validator';
-import { CreatePostDto } from '@/modules/posts/dto/create-post.dto';
+import { PartialType } from '@nestjs/swagger';
+import { CreatePostDto } from './create-post.dto';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength, IsOptional } from 'class-validator';
 
-export class UpdatePostDto extends PartialType(
-  OmitType(CreatePostDto, ['userId'] as const),
-) {
-  @IsOptional()
+export class UpdatePostDto {
+  @ApiProperty({
+    description: 'Post title (optional)',
+    example: 'Updated Blog Post Title',
+    minLength: 6,
+    required: false
+  })
   @IsString()
   @MinLength(6)
-  title?: string;
-
   @IsOptional()
+  readonly title?: string;
+
+  @ApiProperty({
+    description: 'Post content (optional)',
+    example: 'This is the updated content of my blog post. I have made some changes to improve it.',
+    required: false
+  })
   @IsString()
-  content?: string;
+  @IsOptional()
+  readonly content?: string;
 }

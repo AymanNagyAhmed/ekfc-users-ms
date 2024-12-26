@@ -1,28 +1,20 @@
-import { IsString } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePostDto {
-
   @ApiProperty({
     description: 'Post title',
-    example: 'post 1'
+    example: 'My First Blog Post',
+    minLength: 6
   })
   @IsString()
+  @MinLength(6)
   readonly title: string;
 
   @ApiProperty({
     description: 'Post content',
-    example: 'post 1 content'
+    example: 'This is the content of my first blog post. It contains all the details and information I want to share.'
   })
   @IsString()
   readonly content: string;
-
-  @ApiProperty({
-    description: 'Post Author Id',
-    example: '67668222525f0b148b57def3'
-  })
-  @IsString()
-  readonly userId: string;
-
-
 }

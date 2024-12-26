@@ -9,6 +9,7 @@ import { API } from '@/common/constants/api.constants';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { RmqService } from '@/config/rmq/rmq.service';
 import * as cookieParser from 'cookie-parser';
+import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -27,7 +28,6 @@ async function bootstrap() {
     .setTitle('User managementmanagement API')
     .setDescription('API documentation for user management management system')
     .setVersion('1.0')
-    .addTag('users')
     .addBearerAuth()
     .build();
 
@@ -46,6 +46,8 @@ async function bootstrap() {
 
   // Add cookie parser middleware
   app.use(cookieParser());
+
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);

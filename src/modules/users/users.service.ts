@@ -4,10 +4,9 @@ import { InvalidInputException } from '@/common/exceptions/invalid-input.excepti
 import { UnexpectedErrorException } from '@/common/exceptions/unexpected-error.exception';
 import { User } from '@/modules/users/schemas/user.schema';
 import * as bcrypt from 'bcryptjs';
-import { CreateUserDto, UserRole } from '@/modules/users/dto/create-user.dto';
-import { ClientProxy } from '@nestjs/microservices';
+import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
 import { UsersRepository } from './users.repository';
-import { BLOGS_SERVICE } from '@/common/constants/services';
+import { UserRole } from '@/modules/users/enums/user-role.enum';
 
 @Injectable()
 export class UsersService {
@@ -58,12 +57,12 @@ export class UsersService {
   }
 
   /**
-   * Retrieves a user by their ID
+   * Retrieves a user
    * @param id User's unique identifier
    * @returns User object
    * @throws ResourceNotFoundException if user not found
    */
-  async findUserById(id: string): Promise<User> {
+  async findOne(id: string): Promise<User> {
     try {
       const user = await this.usersRepository.findOne({ _id: id });
       return user;

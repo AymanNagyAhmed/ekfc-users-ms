@@ -1,6 +1,6 @@
 import { AbstractDocument } from '@/common/database/abstract.schema';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { UserRole } from '../dto/create-user.dto';
+import { UserRole } from '@/modules/users/enums/user-role.enum';
 
 
 @Schema({

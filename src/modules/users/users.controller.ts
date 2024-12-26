@@ -1,150 +1,189 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, Patch } from '@nestjs/common';
-import { Request } from 'express';
-import { UsersService } from '@/modules/users/users.service';
-import { ApiResponse } from '@/common/interfaces/api-response.interface';
-import { User } from '@/modules/users/schemas/user.schema';
-import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
-import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
-import { ApiResponseUtil } from '@/common/utils/api-response.util';
-import { HTTP_STATUS } from '@/common/constants/api.constants';
-import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
+import { Controller, Get, Body, Patch, Param, Delete, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiSecurity, ApiBody } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { User } from './schemas/user.schema';
 
-@ApiTags('users')
+// Define a reusable response schema object
+const userResponseProperties = {
+  _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+  firstName: { type: 'string', example: 'John' },
+  lastName: { type: 'string', example: 'Doe' },
+  email: { type: 'string', example: 'john.doe@example.com' },
+  isEmailVerified: { type: 'boolean', example: true },
+  role: { type: 'string', example: 'user' },
+  phoneNumber: { type: 'string', example: '+1234567890' },
+  isActive: { type: 'boolean', example: true },
+  fullName: { type: 'string', example: 'John Doe' },
+  createdAt: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
+  updatedAt: { type: 'string', example: '2024-03-20T10:00:00.000Z' }
+};
+
+// Add this response schema for unauthorized
+const unauthorizedResponseSchema = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', example: false },
+    statusCode: { type: 'number', example: 401 },
+    message: { type: 'string', example: 'You are not authorized to access this resource' },
+    path: { type: 'string', example: '/users' },
+    timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' }
+  }
+};
+
+@ApiTags('3. Users')
 @Controller('users')
+@UseGuards(JwtAuthGuard)
+@ApiSecurity('bearer')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) {}
 
-    @ApiOperation({ summary: 'Get all users' })
-    @SwaggerResponse({ 
-      status: 200, 
-      description: 'List of all users retrieved successfully' 
-    })
-    @Get()
-    async findAll(@Req() req: Request): Promise<ApiResponse<User[]>> {
-        const users = await this.usersService.findAll();
-        return ApiResponseUtil.success(
-            users,
-            'Users retrieved successfully',
-            req.path
-        );
-    }
-
-    @ApiOperation({ summary: 'Create new user' })
-    @SwaggerResponse({ 
-      status: 201, 
-      description: 'User created successfully' 
-    })
-    @Post()
-    async create(
-        @Body() createUserDto: CreateUserDto,
-        @Req() req: Request
-    ): Promise<ApiResponse<User>> {
-        const user = await this.usersService.createUser(createUserDto);
-        return ApiResponseUtil.success(
-            user,
-            'User created successfully',
-            req.path,
-            HTTP_STATUS.CREATED
-        );
-    }
-
-    @ApiOperation({ summary: 'Get user by ID' })
-    @SwaggerResponse({ 
-      status: 200, 
-      description: 'User retrieved successfully' 
-    })
-    @SwaggerResponse({ 
-      status: 404, 
-      description: 'User not found' 
-    })
-    @Get(':id')
-    async findOne(
-        @Param('id') id: string,
-        @Req() req: Request
-    ): Promise<ApiResponse<User>> {
-        const user = await this.usersService.findUserById(id);
-        return ApiResponseUtil.success(
-            user,
-            'User retrieved successfully',
-            req.path
-        );
-    }
-
-    @ApiOperation({ summary: 'Update user by ID' })
-    @SwaggerResponse({ 
-      status: 200, 
-      description: 'User updated successfully' 
-    })
-    @SwaggerResponse({ 
-      status: 404, 
-      description: 'User not found' 
-    })
-    @Put(':id')
-    async update(
-        @Param('id') id: string,
-        @Body() updateUserDto: UpdateUserDto,
-        @Req() req: Request
-    ): Promise<ApiResponse<User>> {
-        try {
-            const cleanUpdateDto = Object.entries(updateUserDto)
-                .reduce((acc, [key, value]) => {
-                    if (value !== undefined && value !== null) {
-                        acc[key] = value;
-                    }
-                    return acc;
-                }, {});            
-            const user = await this.usersService.updateUser(id, cleanUpdateDto);
-            
-            return ApiResponseUtil.success(
-                user,
-                'User updated successfully',
-                req.path
-            );
-        } catch (error) {
-            console.error('Update error:', error);
-            throw error;
+  @Get()
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({
+    status: 200,
+    description: 'Users retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        statusCode: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'Users retrieved successfully' },
+        path: { type: 'string', example: '/users' },
+        timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: userResponseProperties
+          }
         }
+      }
     }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized',
+    schema: unauthorizedResponseSchema
+  })
+  findAll() {
+    return this.usersService.findAll();
+  }
 
-    @ApiOperation({ summary: 'Patch user by ID' })
-    @SwaggerResponse({ 
-      status: 200, 
-      description: 'User updated successfully' 
-    })
-    @SwaggerResponse({ 
-      status: 404, 
-      description: 'User not found' 
-    })
-    @Patch(':id')
-    async patch(
-        @Param('id') id: string,
-        @Body() updateUserDto: UpdateUserDto,
-        @Req() req: Request
-    ): Promise<ApiResponse<User>> {
-        return this.update(id, updateUserDto, req);
+  @Get('profile')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        statusCode: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'Profile retrieved successfully' },
+        path: { type: 'string', example: '/users/profile' },
+        timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
+        data: {
+          type: 'object',
+          properties: userResponseProperties
+        }
+      }
     }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized',
+    schema: unauthorizedResponseSchema
+  })
+  getProfile(@CurrentUser() user: User) {
+    return this.usersService.findOne(user._id.toString());
+  }
 
-    @ApiOperation({ summary: 'Delete user by ID' })
-    @SwaggerResponse({ 
-      status: 200, 
-      description: 'User deleted successfully' 
-    })
-    @SwaggerResponse({ 
-      status: 404, 
-      description: 'User not found' 
-    })
-    @Delete(':id')
-    async remove(
-        @Param('id') id: string,
-        @Req() req: Request
-    ): Promise<ApiResponse<void>> {
-        await this.usersService.deleteUser(id);
-        return ApiResponseUtil.success(
-            null,
-            'User deleted successfully',
-            req.path
-        );
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiBody({
+    description: 'User update fields',
+    schema: {
+      type: 'object',
+      properties: {
+        firstName: { type: 'string', example: 'John' },
+        lastName: { type: 'string', example: 'Doe' },
+        email: { type: 'string', example: 'john.doe@example.com' },
+        phoneNumber: { type: 'string', example: '+1234567890' }
+      }
     }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        statusCode: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'User updated successfully' },
+        path: { type: 'string', example: '/users/:id' },
+        timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
+        data: {
+          type: 'object',
+          properties: userResponseProperties
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized',
+    schema: unauthorizedResponseSchema
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() currentUser: User
+  ) {
+    if (id !== currentUser._id.toString()) {
+      throw new UnauthorizedException('You can only update your own profile');
+    }
+    return this.usersService.updateUser(id, updateUserDto);
+  }
 
-
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'User deleted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        statusCode: { type: 'number', example: 200 },
+        message: { type: 'string', example: 'User deleted successfully' },
+        path: { type: 'string', example: '/users/:id' },
+        timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
+        data: {
+          type: 'object',
+          properties: userResponseProperties
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized',
+    schema: unauthorizedResponseSchema
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User
+  ) {
+    if (id !== currentUser._id.toString()) {
+      throw new UnauthorizedException('You can only delete your own profile');
+    }
+    return this.usersService.deleteUser(id);
+  }
 }

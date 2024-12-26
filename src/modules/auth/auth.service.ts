@@ -68,4 +68,9 @@ export class AuthService {
       path: '/api'
     });
   }
+
+  async validateUser(authentication: string): Promise<User> {
+    const payload = this.jwtService.verify(authentication);
+    return this.usersService.findOne(payload.userId);
+  }
 }
