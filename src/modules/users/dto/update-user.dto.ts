@@ -20,7 +20,7 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({
     description: 'User\'s email',
-    example: 'john.doe@example.com'
+    example: 'test@test.com'
   })
   @IsOptional()
   @IsEmail()

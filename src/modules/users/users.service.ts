@@ -27,13 +27,26 @@ export class UsersService {
    * Creates a new user account
    * @param createUserDto User creation data
    * @returns Newly created user object
-   * @throws InvalidInputException if email already exists
+   * @throws InvalidInputException if email or phone number already exists
    */
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     try {
-      const existingUser = await this.usersRepository.findOne({ email: createUserDto.email });
-      if (existingUser) {
+      // Check for existing email
+      const existingUserWithEmail = await this.usersRepository.findOne({ 
+        email: createUserDto.email 
+      });
+      if (existingUserWithEmail) {
         throw new InvalidInputException('Email already exists');
+      }
+
+      // Check for existing phone number if provided
+      if (createUserDto.phoneNumber) {
+        const existingUserWithPhone = await this.usersRepository.findOne({ 
+          phoneNumber: createUserDto.phoneNumber 
+        });
+        if (existingUserWithPhone) {
+          throw new InvalidInputException('Phone number already exists');
+        }
       }
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, this.SALT_ROUNDS);
@@ -52,6 +65,13 @@ export class UsersService {
       }
       // Log the actual error for debugging
       console.error('Error creating user:', error);
+      
+      // Check for MongoDB duplicate key error
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        throw new InvalidInputException(`${field} already exists`);
+      }
+      
       throw new UnexpectedErrorException('Error creating user');
     }
   }
@@ -81,14 +101,28 @@ export class UsersService {
    */
   async updateUser(id: string, updateUserDto: Partial<User>): Promise<User> {
     try {
-      const user = await this.usersRepository.findOneAndUpdate({ _id: id }, updateUserDto);
+      console.log('Updating user with ID:', id);
+      console.log('Update data:', updateUserDto);
+
+      const user = await this.usersRepository.findOneAndUpdate(
+        { _id: id },
+        updateUserDto
+      );
+
+      if (!user) {
+        console.log('User not found');
+        throw new ResourceNotFoundException('User not found');
+      }
+
+      console.log('User updated successfully:', user);
       return user;
     } catch (error) {
       console.error('Update error details:', error);
-      if (error instanceof ResourceNotFoundException || 
-          error instanceof InvalidInputException) {
+      
+      if (error instanceof ResourceNotFoundException) {
         throw error;
       }
+      
       throw new UnexpectedErrorException('Error updating user: ' + error.message);
     }
   }

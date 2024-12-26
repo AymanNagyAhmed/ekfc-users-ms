@@ -1,17 +1,19 @@
-import { Controller, Get, Body, Patch, Param, Delete, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, UseGuards, UnauthorizedException, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiSecurity, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from './schemas/user.schema';
+import { ApiResponseUtil } from '@/common/utils/api-response.util';
+import { ApiResponse as IApiResponse } from '@/common/interfaces/api-response.interface';
 
 // Define a reusable response schema object
 const userResponseProperties = {
   _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
   firstName: { type: 'string', example: 'John' },
   lastName: { type: 'string', example: 'Doe' },
-  email: { type: 'string', example: 'john.doe@example.com' },
+  email: { type: 'string', example: 'test@test.com' },
   isEmailVerified: { type: 'boolean', example: true },
   role: { type: 'string', example: 'user' },
   phoneNumber: { type: 'string', example: '+1234567890' },
@@ -40,38 +42,6 @@ const unauthorizedResponseSchema = {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({
-    status: 200,
-    description: 'Users retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        statusCode: { type: 'number', example: 200 },
-        message: { type: 'string', example: 'Users retrieved successfully' },
-        path: { type: 'string', example: '/users' },
-        timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: userResponseProperties
-          }
-        }
-      }
-    }
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized',
-    schema: unauthorizedResponseSchema
-  })
-  findAll() {
-    return this.usersService.findAll();
-  }
-
   @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({
@@ -97,11 +67,17 @@ export class UsersController {
     description: 'Unauthorized',
     schema: unauthorizedResponseSchema
   })
-  getProfile(@CurrentUser() user: User) {
-    return this.usersService.findOne(user._id.toString());
+  async getProfile(@CurrentUser() user: User): Promise<IApiResponse<User>> {
+    const profile = await this.usersService.findOne(user._id.toString());
+    return ApiResponseUtil.success(
+      profile,
+      'Profile retrieved successfully',
+      '/users/profile',
+      HttpStatus.OK
+    );
   }
 
-  @Patch(':id')
+  @Patch('profile')
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiBody({
     description: 'User update fields',
@@ -110,7 +86,7 @@ export class UsersController {
       properties: {
         firstName: { type: 'string', example: 'John' },
         lastName: { type: 'string', example: 'Doe' },
-        email: { type: 'string', example: 'john.doe@example.com' },
+        email: { type: 'string', example: 'test@test.com' },
         phoneNumber: { type: 'string', example: '+1234567890' }
       }
     }
@@ -140,18 +116,20 @@ export class UsersController {
     schema: unauthorizedResponseSchema
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  update(
-    @Param('id') id: string,
+  async update(
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() currentUser: User
-  ) {
-    if (id !== currentUser._id.toString()) {
-      throw new UnauthorizedException('You can only update your own profile');
-    }
-    return this.usersService.updateUser(id, updateUserDto);
+    @CurrentUser() user: User
+  ): Promise<IApiResponse<User>> {
+    const updatedUser = await this.usersService.updateUser(user._id.toString(), updateUserDto);
+    return ApiResponseUtil.success(
+      updatedUser,
+      'User updated successfully',
+      '/users/profile',
+      HttpStatus.OK
+    );
   }
 
-  @Delete(':id')
+  @Delete('profile')
   @ApiOperation({ summary: 'Delete current user profile' })
   @ApiResponse({
     status: 200,
@@ -162,11 +140,11 @@ export class UsersController {
         success: { type: 'boolean', example: true },
         statusCode: { type: 'number', example: 200 },
         message: { type: 'string', example: 'User deleted successfully' },
-        path: { type: 'string', example: '/users/:id' },
+        path: { type: 'string', example: '/api/users/profile' },
         timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' },
         data: {
-          type: 'object',
-          properties: userResponseProperties
+          type: 'null',
+          example: null
         }
       }
     }
@@ -174,16 +152,25 @@ export class UsersController {
   @ApiResponse({ 
     status: 401, 
     description: 'Unauthorized',
-    schema: unauthorizedResponseSchema
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: false },
+        statusCode: { type: 'number', example: 401 },
+        message: { type: 'string', example: 'Unauthorized' },
+        path: { type: 'string', example: '/api/users/profile' },
+        timestamp: { type: 'string', example: '2024-03-20T10:00:00.000Z' }
+      }
+    }
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  remove(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: User
-  ) {
-    if (id !== currentUser._id.toString()) {
-      throw new UnauthorizedException('You can only delete your own profile');
-    }
-    return this.usersService.deleteUser(id);
+  async remove(@CurrentUser() user: User): Promise<IApiResponse<null>> {
+    await this.usersService.deleteUser(user._id.toString());
+    return ApiResponseUtil.success(
+      null,
+      'User deleted successfully',
+      '/api/users/profile',
+      HttpStatus.OK
+    );
   }
 }

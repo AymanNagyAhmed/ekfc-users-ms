@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Types } from 'mongoose';
-import { TokenPayload } from '@/modules/auth/auth.service';
+import { TokenPayload } from '@/common/interfaces/api-response.interface';
 import { UsersService } from '@/modules/users/users.service';
 
 @Injectable()

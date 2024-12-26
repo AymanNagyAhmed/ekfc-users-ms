@@ -8,20 +8,25 @@ import { Request } from 'express';
 export class TransformResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse();
     
     return next.handle().pipe(
       map(data => {
         // If the response is already in our API response format, return it as is
         if (data?.success !== undefined) {
+          // Ensure response status code matches the statusCode in the response body
+          response.status(data.statusCode);
           return data;
         }
 
         // Transform the response to our standard format
-        return ApiResponseUtil.success(
+        const transformedResponse = ApiResponseUtil.success(
           data,
           'Operation successful',
           request.url
         );
+        response.status(transformedResponse.statusCode);
+        return transformedResponse;
       }),
     );
   }

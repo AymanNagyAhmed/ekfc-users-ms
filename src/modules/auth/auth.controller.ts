@@ -1,19 +1,16 @@
-import { Controller, Post, UseGuards, Res, Get, Body, Req } from '@nestjs/common';
+import { Controller, Post, UseGuards, Res, Get, Body, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { AuthService } from '@/modules/auth/auth.service';
 import { LocalAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from '@/modules/users/schemas/user.schema';
 import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse, ApiSecurity, ApiBody } from '@nestjs/swagger';
-import { CreateUserDto } from '../users/dto/create-user.dto';
-import { ApiResponse } from '@/common/interfaces/api-response.interface';
+import { RegisterDto } from '@/modules/auth/dto/register.dto';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
+import { ApiResponse, LoginResponse } from '@/common/interfaces/api-response.interface';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { MessagePattern } from '@nestjs/microservices';
-
-interface LoginResponse {
-  user: User;
-  access_token: string;
-}
+import { ApiResponseUtil } from '@/common/utils/api-response.util';
 
 @ApiTags('2. Auth')
 @Controller('auth')
@@ -22,6 +19,7 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Register new user' })
+  @ApiBody({ type: RegisterDto })
   @SwaggerResponse({ 
     status: 201, 
     description: 'User registered successfully',
@@ -31,34 +29,37 @@ export class AuthController {
         success: { type: 'boolean', example: true },
         statusCode: { type: 'number', example: 201 },
         message: { type: 'string', example: 'User registered successfully' },
-        path: { type: 'string', example: '/auth/register' },
+        path: { type: 'string', example: '/api/auth/register' },
         timestamp: { type: 'string', example: '2024-12-25T11:00:00.000Z' },
         data: {
           type: 'object',
           properties: {
-            user: {
-              type: 'object',
-              properties: {
-                _id: { type: 'string' },
-                email: { type: 'string' },
-                isEmailVerified: { type: 'boolean' },
-                role: { type: 'string' },
-                isActive: { type: 'boolean' },
-                createdAt: { type: 'string' },
-                updatedAt: { type: 'string' }
-              }
-            }
+            _id: { type: 'string', example: '507f1f77bcf86cd799439011' },
+            email: { type: 'string', example: 'test@test.com' },
+            isEmailVerified: { type: 'boolean', example: false },
+            role: { type: 'string', example: 'user' },
+            isActive: { type: 'boolean', example: true },
+            createdAt: { type: 'string', example: '2024-12-25T11:00:00.000Z' },
+            updatedAt: { type: 'string', example: '2024-12-25T11:00:00.000Z' }
           }
         }
       }
     }
   })
-  async register(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
-    return this.authService.register(createUserDto);
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() registerDto: RegisterDto): Promise<ApiResponse<User>> {
+    const user = await this.authService.register(registerDto);
+    return ApiResponseUtil.success(
+      user,
+      'User registered successfully',
+      '/api/auth/register',
+      HttpStatus.CREATED
+    );
   }
 
   @Post('login')
   @ApiOperation({ summary: 'User login' })
+  @ApiBody({ type: LoginDto })
   @SwaggerResponse({ 
     status: 200, 
     description: 'Login successful',
@@ -68,31 +69,60 @@ export class AuthController {
         success: { type: 'boolean', example: true },
         statusCode: { type: 'number', example: 200 },
         message: { type: 'string', example: 'Login successful' },
-        path: { type: 'string', example: '/auth/login' },
-        timestamp: { type: 'string', example: '2024-12-25T11:00:00.000Z' },
+        path: { type: 'string', example: '/api/auth/login' },
+        timestamp: { type: 'string', example: '2024-12-26T15:57:37.887Z' },
         data: {
           type: 'object',
           properties: {
             user: {
               type: 'object',
               properties: {
-                _id: { type: 'string' },
-                email: { type: 'string' },
-                role: { type: 'string' }
+                _id: { type: 'string', example: '676d7af12df61838c1c700dc' },
+                email: { type: 'string', example: 'test@test.com' },
+                isEmailVerified: { type: 'boolean', example: false },
+                role: { type: 'string', example: 'user' },
+                isActive: { type: 'boolean', example: true },
+                createdAt: { type: 'string', example: '2024-12-26T15:49:05.499Z' },
+                updatedAt: { type: 'string', example: '2024-12-26T15:49:05.499Z' }
               }
             },
-            access_token: { type: 'string' }
+            access_token: { 
+              type: 'string', 
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' 
+            }
           }
         }
       }
     }
   })
+  @SwaggerResponse({ 
+    status: 401, 
+    description: 'Unauthorized - Invalid credentials',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: false },
+        statusCode: { type: 'number', example: 401 },
+        message: { type: 'string', example: 'Invalid email or password' },
+        path: { type: 'string', example: '/api/auth/login' },
+        timestamp: { type: 'string', example: '2024-12-26T15:47:37.418Z' }
+      }
+    }
+  })
   @UseGuards(LocalAuthGuard)
+  @HttpCode(HttpStatus.OK)
   async login(
+    @Body() loginDto: LoginDto,
     @CurrentUser() user: User,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<LoginResponse> {
-    return this.authService.login(user, response);
+  ): Promise<ApiResponse<LoginResponse>> {
+    const loginData = await this.authService.login(user, response);
+    return ApiResponseUtil.success(
+      loginData,
+      'Login successful',
+      '/api/auth/login',
+      HttpStatus.OK
+    );
   }
 
   @ApiOperation({ summary: 'Logout current user' })
@@ -133,9 +163,17 @@ export class AuthController {
   @ApiSecurity('bearer')
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+  logout(
+    @Req() request: Request, 
+    @Res({ passthrough: true }) response: Response
+  ): ApiResponse<{ message: string }> {
     this.authService.logout(response);
-    return { message: 'Successfully logged out' };
+    return ApiResponseUtil.success(
+      { message: 'Successfully logged out' },
+      'Logout successful',
+      '/api/auth/logout',
+      HttpStatus.OK
+    );
   }
 
   @UseGuards(JwtAuthGuard)

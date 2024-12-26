@@ -9,6 +9,7 @@ import { Observable, from } from 'rxjs';
 import { AuthService } from '@/modules/auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '@/modules/users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -16,7 +17,12 @@ export class JwtAuthGuard implements CanActivate {
     @Inject(AuthService) private readonly authService: AuthService,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.jwtService = new JwtService({
+      secret: this.configService.get<string>('JWT_SECRET'),
+    });
+  }
 
   canActivate(
     context: ExecutionContext,
@@ -52,17 +58,22 @@ export class JwtAuthGuard implements CanActivate {
     } else if (context.getType() === 'http') {
       const request = context.switchToHttp().getRequest();
       
-      // Check both cookie and Authorization header
-      authentication = request.cookies?.Authentication || 
-                      request.headers.authorization?.replace('Bearer ', '');
+      // First try to get from Authorization header
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        authentication = authHeader.substring(7); // Remove 'Bearer ' prefix
+      }
       
+      // If not in header, try cookie
+      if (!authentication) {
+        authentication = request.cookies?.Authentication;
+      }
     }
     
     if (!authentication) {
-      throw new UnauthorizedException(
-        'No authentication token provided',
-      );
+      throw new UnauthorizedException('No authentication token provided');
     }
+
     return authentication;
   }
 

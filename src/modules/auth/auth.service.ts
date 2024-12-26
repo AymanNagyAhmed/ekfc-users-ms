@@ -1,22 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { User } from '@/modules/users/schemas/user.schema';
-import { CreateUserDto } from '../users/dto/create-user.dto';
-import { ApiResponse } from '@/common/interfaces/api-response.interface';
+import { RegisterDto } from './dto/register.dto';
+import { ApiResponse, LoginResponse, TokenPayload } from '@/common/interfaces/api-response.interface';
 import { UsersService } from '@/modules/users/users.service';
 import { ApiResponseUtil } from '@/common/utils/api-response.util';
 import { TimeUtil } from '@/common/utils/time.util';
+import { UserRole } from '@/modules/users/enums/user-role.enum';
 
-export interface TokenPayload {
-  userId: string;
-}
 
-interface LoginResponse {
-  user: User;
-  access_token: string;
-}
 
 @Injectable()
 export class AuthService {
@@ -26,13 +20,15 @@ export class AuthService {
     private readonly usersService: UsersService,
   ) {}
 
-  async register(createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
-    const user = await this.usersService.createUser(createUserDto);
-    return ApiResponseUtil.success(
-      user,
-      'User created successfully',
-      '/auth/register'
-    );
+  async register(registerDto: RegisterDto): Promise<User> {
+    const createUserDto = {
+      ...registerDto,
+      role: UserRole.USER,
+      isActive: true,
+      isEmailVerified: false
+    };
+
+    return this.usersService.createUser(createUserDto);
   }
 
   async login(user: User, response: Response): Promise<LoginResponse> {

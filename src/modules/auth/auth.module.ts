@@ -7,6 +7,7 @@ import { AuthService } from '@/modules/auth/auth.service';
 import { AuthController } from '@/modules/auth/auth.controller';
 import { JwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
 import { LocalStrategy } from '@/modules/auth/strategies/local.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -25,7 +26,17 @@ import { LocalStrategy } from '@/modules/auth/strategies/local.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
-  exports: [AuthService],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    JwtAuthGuard,
+    {
+      provide: 'JWT_SECRET',
+      useFactory: (configService: ConfigService) => configService.get('JWT_SECRET'),
+      inject: [ConfigService],
+    },
+  ],
+  exports: [AuthService, JwtAuthGuard],
 })
 export class AuthModule {}

@@ -55,7 +55,6 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
     update: UpdateQuery<TDocument>,
     options?: SaveOptions,
   ): Promise<TDocument | null> {
-    const session = options?.session || await this.startTransaction();
     try {
       const document = await this.model.findOneAndUpdate(
         filterQuery,
@@ -64,7 +63,6 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
           lean: true,
           new: true,
           runValidators: true,
-          session,
           ...options,
         }
       );
@@ -73,20 +71,10 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
         return null;
       }
 
-      if (!options?.session) {
-        await session.commitTransaction();
-      }
-
       return document as unknown as TDocument;
     } catch (error) {
-      if (!options?.session) {
-        await session.abortTransaction();
-      }
+      this.logger.error(`Error in findOneAndUpdate: ${error.message}`, error.stack);
       throw error;
-    } finally {
-      if (!options?.session) {
-        session.endSession();
-      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { HTTP_STATUS } from '@/common/constants/api.constants';
+import { User } from '@/modules/users/schemas/user.schema';
 
 /**
  * Interface for successful API responses
@@ -24,6 +25,14 @@ export interface ApiErrorResponse {
   errors?: Record<string, string[]>;
 }
 
+export interface LoginResponse {
+  user: User;
+  access_token: string;
+}
+
+export interface TokenPayload {
+  userId: string;
+}
 /**
  * Union type for all API responses
  */
